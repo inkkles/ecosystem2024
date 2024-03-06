@@ -9,13 +9,11 @@ using UnityEngine.UI;
 using UnityEngine.UIElements;
 using static UnityEngine.GraphicsBuffer;
 
-public class Chicken : MonoBehaviour
+public class Wolf : MonoBehaviour
 {
     public float moveSpeed;
     [Range(0f, 0.1f)]
     public float rotSpeed;
-
-    public GameObject chickenCoop;
 
     private Vector3 targetAngle;
 
@@ -25,23 +23,18 @@ public class Chicken : MonoBehaviour
 
     public FieldOfView fov;
 
-    public float hungerTime;
-    private float hunger;
 
     enum States
     {
         Wandering,  //
         Hungry,     //
-        Eating,     //
-        Fleeing,    //
-        Dead        //
+        Eating      //
     }
     States state;
 
     // Start is called before the first frame update
     void Start()
     {
-        hunger = hungerTime;
         state = States.Wandering;
         rb = GetComponent<Rigidbody>();
         StartCoroutine(SetRandomDirectionEveryFewSeconds());
@@ -49,7 +42,7 @@ public class Chicken : MonoBehaviour
 
     IEnumerator SetRandomDirectionEveryFewSeconds()
     {
-        Debug.Log("Chicken's Wander Coroutine Start");
+        Debug.Log("Wolf's Wander Coroutine Start");
         while (state == States.Wandering)
         {
             yield return new WaitForSeconds(Random.Range(0.3f, 2f));
@@ -62,13 +55,8 @@ public class Chicken : MonoBehaviour
 
             // Set the character's forward direction to the random direction
             targetAngle = randomDirection;
-            Debug.Log("Chicken Wander");
+            Debug.Log("Wolf Wander");
         }
-    }
-
-    private void OnMouseOver()
-    {
-        Debug.Log("State: " + state + "\nHunger Level: " + hunger + "/" + hungerTime);
     }
 
     void FixedUpdate()
@@ -78,92 +66,38 @@ public class Chicken : MonoBehaviour
 
         rb.MovePosition(rb.position + velocity * Time.fixedDeltaTime);
 
-        if (hunger > 0) hunger--; //hunger decreases every game tick
-        else state = States.Dead; //death by starvation
     }
     // Update is called once per frame
     void Update()
     {
-        
-        switch (state) {
+
+        switch (state)
+        {
             case States.Wandering:
                 if (fov.visibleCreatuers.Count == 0) break;
-                foreach(GameObject visibleCreature in fov.visibleCreatuers)
-                {
-                    if(visibleCreature == null) continue;
-                    if (visibleCreature.CompareTag("Wolf"))
-                    {
-                        state = States.Fleeing; break;
-                    }
-                    if(visibleCreature.CompareTag("Berry"))
-                    {
-                        if(isHungry()) state = States.Hungry; break;
-                    }
-                }
+                state = States.Hungry;
                 break;
             case States.Hungry:
-                GameObject berry = getNearestCreatureInFOV();
-                //nearest berry is ACTUALLY A WOLF OK WE HAVE OTHER PRIORITIES
-                if (berry == null) break;
-                if (berry.CompareTag("Wolf"))
+                GameObject chicken = getNearestCreatureInFOV();
+                if (chicken != null && chicken.CompareTag("Chicken"))
                 {
-                    state = States.Fleeing;
-                }
-                if (berry.CompareTag("Berry"))
-                {
-                    //Debug.Log("Berry Spotted!");
-                    targetAngle = FieldOfView.DirFromAngle(transform, Vector3.Angle(transform.position, berry.transform.position), false);
+                    //Debug.Log("Chicken Spotted!");
+                    targetAngle = FieldOfView.DirFromAngle(transform, Vector3.Angle(transform.position, chicken.transform.position), false);
                 }
                 else
                 {
                     state = States.Wandering;
                 }
 
-                break;
-            case States.Fleeing:
-                GameObject target = getNearestCreatureInFOV("Wolf");
-                //we just saw a wolf!
-                //squawk in fear
-                if (target.CompareTag("Wolf"))
-                {
-                    targetAngle = FieldOfView.DirFromAngle(transform, Vector3.Angle(transform.position, target.transform.position) + 180, false);
-                }
                 break;
             case States.Eating:
-                    GetComponent<AudioSource>().Play(); //munch
-                    Debug.Log("Berry Consumed");
-                    hunger = hungerTime;
-                    state = States.Wandering;
-                break;
-            case States.Dead:
-                if(hunger <= 0)
-                {
-                    //die of starvation
-                    Debug.Log("Starved");
-                }
-                else
-                {
-                    //die by wolf
-                    Debug.Log("Eaten");
-                }
-                //die
-                Destroy(this.gameObject);
+                GetComponent<AudioSource>().Play(); //munch
+                state = States.Wandering;
 
-                //Respawn
-                if(chickenCoop != null)
-                {
-                    Debug.Log("Respawned Chicken!");
-                    chickenCoop.GetComponent<ChickenCoop>().spawnChicken();
-                }
                 break;
             default:
                 break;
         }
-    }
-
-    private bool isHungry()
-    {
-        return hunger < hungerTime / 1.1f;
     }
 
     private GameObject getNearestCreatureInFOV()
@@ -173,8 +107,8 @@ public class Chicken : MonoBehaviour
         float nearestDistance = float.MaxValue;
         foreach (GameObject visibleTarget in fov.visibleCreatuers)
         {
-            if (visibleTarget == null) continue;
-            if (nearestSoFar == null) {
+            if (nearestSoFar == null)
+            {
                 nearestSoFar = visibleTarget;
                 nearestDistance = Vector3.Distance(transform.position, visibleTarget.transform.position);
             }
@@ -190,7 +124,7 @@ public class Chicken : MonoBehaviour
         }
         return nearestSoFar;
     }
-    
+
     //tag argument to specify what kind of creature to look for
     private GameObject getNearestCreatureInFOV(string tag)
     {
@@ -222,22 +156,17 @@ public class Chicken : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log("TURN AROUND!");
-        transform.forward = -targetAngle;
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if(other.gameObject.tag == "Berry")
+        Debug.Log("Wolf collided with " + collision);
+        if (collision.gameObject.tag == "Chicken" && state == States.Hungry)
         {
-            if(state == States.Hungry)
-            {
-                Destroy(other.gameObject); //eat yummy berry
-                state = States.Eating;
-            }
+            Destroy(collision.gameObject); //eat yummy chicken
+            Debug.Log("Chicken Consumed");
+            state = States.Eating;
+        }
+        else
+        {
+            Debug.Log("TURN AROUND!");
+            transform.forward = -targetAngle;
         }
     }
-
-
-
 }
