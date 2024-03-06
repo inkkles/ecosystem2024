@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class FieldOfView : MonoBehaviour
 {
-    //thanks sebastian lauge for his field of view tutorial
+    //thanks sebastian lauge for his field of view tutorial very helpful
+
     public float viewRadius;
     [Range(0, 360)]
     public float viewAngle;
@@ -13,14 +14,14 @@ public class FieldOfView : MonoBehaviour
     public LayerMask obstacleMask;
 
     [HideInInspector]
-    public List<Transform> visibleCreatuers = new List<Transform>();
+    public List<GameObject> visibleCreatuers = new List<GameObject>();
 
     private void Start()
     {
-        StartCoroutine("FindTargetsWithDelay", .2f);
+        StartCoroutine("FindCreaturesWithDelay", .2f);
     }
 
-    IEnumerator FindTargetsWithDelay(float delay)
+    IEnumerator FindCreaturesWithDelay(float delay)
     {
         while (true)
         {
@@ -28,13 +29,17 @@ public class FieldOfView : MonoBehaviour
             FindVisibleCreatures();
         }
     }
-    public List<Transform> FindVisibleCreatures() 
+    public List<GameObject> FindVisibleCreatures() 
     {
         visibleCreatuers.Clear();
-        List<Transform> creaturesInView = new List<Transform>();
-        Collider[] creaturesInScope = Physics.OverlapSphere(transform.position, viewRadius, targetMask);
-        for(int i = 0; i < creaturesInScope.Length; i++)
+        List<GameObject> creaturesInView = new List<GameObject>();
+        Collider[] collidersInScope = Physics.OverlapSphere(transform.position, viewRadius, targetMask);
+        GameObject[] creaturesInScope = new GameObject[collidersInScope.Length];
+    
+        for(int i = 0; i < collidersInScope.Length; i++)
         {
+            creaturesInScope[i] = collidersInScope[i].gameObject;
+
             Transform target = creaturesInScope[i].transform;
             Vector3 dirToTarget = (target.position - transform.position).normalized;
             if(Vector3.Angle(transform.forward, dirToTarget) < viewAngle / 2) //is in view angle
@@ -42,7 +47,7 @@ public class FieldOfView : MonoBehaviour
                 float distToTarget = Vector3.Distance(transform.position, target.position);
                 if (!Physics.Raycast(transform.position, dirToTarget, distToTarget, obstacleMask)) //is not obstructed
                 {
-                    creaturesInView.Add(target);
+                    creaturesInView.Add(creaturesInScope[i]);
                 }
             }
             
@@ -55,6 +60,14 @@ public class FieldOfView : MonoBehaviour
         if (!angleIsGlobal)
         {
             angleInDegrees += transform.eulerAngles.y;
+        }
+        return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
+    }
+    public static Vector3 DirFromAngle(Transform t, float angleInDegrees, bool angleIsGlobal)
+    {
+        if (!angleIsGlobal)
+        {
+            angleInDegrees += t.eulerAngles.y;
         }
         return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
     }

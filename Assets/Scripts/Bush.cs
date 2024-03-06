@@ -29,7 +29,7 @@ public class Bush : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(Random.Range(0f, 2f));
-            Debug.Log("BerrySpawned");
+            //Debug.Log("BerrySpawned");
             spawnBerry();
         }
     }
